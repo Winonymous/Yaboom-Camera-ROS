@@ -1,0 +1,15 @@
+# Common files
+*.swp
+*~
+\#*\#
+.\#*
+*.pyc
+*.log
+*.DS_Store
+
+# ROS specific files
+build/
+devel/
+install/
+.catkin_tools/
+.rosinstall
