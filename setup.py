@@ -24,7 +24,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'servo_controller = tf2_servo_controller.tf2_servo_node:main',
+            'servo_controller = yahboom_camera_controller.tf2_servo_node:main',
         ],
     },
 )
