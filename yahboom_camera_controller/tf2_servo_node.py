@@ -1,67 +1,97 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import TransformStamped
-import tf2_ros
+from std_msgs.msg import Int32
 import RPi.GPIO as GPIO
 import time
-import math
+import tf2_ros
+import geometry_msgs.msg
 
-class ServoController(Node):
+class ServoControlNode(Node):
+
     def __init__(self):
-        super().__init__('servo_controller')
+        super().__init__('servo_control_node')
 
-        # Servo and GPIO setup
-        self.SERVO_PIN = 18
+        # Setup GPIO
+        self.servo_pin = 17
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.SERVO_PIN, GPIO.OUT)
-        self.pwm = GPIO.PWM(self.SERVO_PIN, 50)  # 50Hz
+        GPIO.setup(self.servo_pin, GPIO.OUT)
+
+        # Set up PWM for servo control
+        self.pwm = GPIO.PWM(self.servo_pin, 50)
         self.pwm.start(0)
 
-        # TF2 buffer and listener
+        # Create a TF2 Buffer and Listener
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
-        self.timer = self.create_timer(0.1, self.control_loop)
+        # Timer to periodically check the transform
+        self.timer = self.create_timer(0.1, self.timer_callback)  # 10Hz frequency
 
-    def control_loop(self):
+        self.get_logger().info('Servo control node has been started and listening for transforms.')
+
+    def timer_callback(self):
         try:
-            # Look up transform between two frames
-            trans: TransformStamped = self.tf_buffer.lookup_transform(
-                'base_link', 'target_frame', rclpy.time.Time())
-            
-            # Example: use X position to compute servo angle
-            x_position = trans.transform.translation.x
-            self.get_logger().info(f"Transform X: {x_position:.2f}")
+            # Look up the transform from 'base_link' to 'camera_link'
+            transform = self.tf_buffer.lookup_transform('base_link', 'arm', rclpy.time.Time())
 
-            # Convert x_position to angle (you can change this logic!)
-            angle = max(0, min(180, int((x_position + 1.0) * 90)))  # Map from [-1, 1] to [0, 180]
-            self.set_servo_angle(angle)
+            # Extract the position (or orientation) from the transform
+            # Here, we assume we want to control the servo based on the X position of the camera
+            x_position = transform.transform.translation.x
 
-        except Exception as e:
-            self.get_logger().warn(f"Transform lookup failed: {e}")
+            # Log the position and calculate the angle
+            self.get_logger().info(f'Camera X position: {x_position}')
 
-    def set_servo_angle(self, angle):
-        duty = 2.5 + (angle / 180.0) * 10
-        self.pwm.ChangeDutyCycle(duty)
-        time.sleep(0.5)
-        self.pwm.ChangeDutyCycle(0)  # Prevent jitter
+            # Map the X position to a servo angle (you can adjust the scale factor here)
+            # For example, map X in range [-2.0, 2.0] meters to [0, 180] degrees
+            angle = self.map_position_to_angle(x_position)
+            self.get_logger().info(f'Mapped angle: {angle}')
 
-    def destroy_node(self):
+            # Control the servo
+            self.set_angle(angle)
+
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            self.get_logger().warn('Transform not available yet.')
+
+    def set_angle(self, angle):
+        """Convert angle to PWM duty cycle and move the servo."""
+        duty_cycle = (angle / 18) + 2
+        self.pwm.ChangeDutyCycle(duty_cycle)
+        time.sleep(1)
+
+    def map_position_to_angle(self, position):
+        """Map position to an angle for servo control."""
+        # Example: map position range [-2.0, 2.0] to [0, 180]
+        min_position = -2.0  # min camera X position (in meters)
+        max_position = 2.0   # max camera X position (in meters)
+        min_angle = 0        # min angle (degrees)
+        max_angle = 180      # max angle (degrees)
+
+        # Ensure the position is within the range
+        position = max(min(position, max_position), min_position)
+
+        # Map position to angle
+        angle = ((position - min_position) / (max_position - min_position)) * (max_angle - min_angle) + min_angle
+        return angle
+
+    def cleanup(self):
+        """Clean up PWM and GPIO when shutting down."""
         self.pwm.stop()
         GPIO.cleanup()
-        super().destroy_node()
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ServoController()
+
+    servo_control_node = ServoControlNode()
+
     try:
-        rclpy.spin(node)
+        rclpy.spin(servo_control_node)
     except KeyboardInterrupt:
         pass
     finally:
-        node.destroy_node()
+        servo_control_node.cleanup()
         rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

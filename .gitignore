@@ -13,3 +13,5 @@ devel/
 install/
 .catkin_tools/
 .rosinstall
+
+.vscode/

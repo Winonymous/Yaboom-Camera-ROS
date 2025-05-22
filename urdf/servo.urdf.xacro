@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<robot name="servo_simulation">
+
+  <!-- Define the base link (fixed part) -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.05" length="0.2" />
+      </geometry>
+      <!-- <material name="blue"/> -->
+    </visual>
+  </link>
+
+  <!-- Define the rotating part (e.g., the arm or end-effector) -->
+  <link name="arm">
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.5" />
+      </geometry>
+      <!-- <material name="green"/> -->
+    </visual>
+  </link>
+
+  <!-- Define the joint that connects the base to the arm (rotating joint) -->
+  <joint name="servo_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="arm"/>
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+    <axis xyz="0 0 1" />
+    <limit lower="-1.5" upper="1.5" effort="10" velocity="1.0" />
+  </joint>
+
+</robot>
+  
