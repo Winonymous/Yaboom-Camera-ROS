@@ -7,6 +7,17 @@
   <maintainer email="anjuwonololade@gmail.com">lolade</maintainer>
   <license>TODO: License declaration</license>
 
+  <!-- Build dependencies -->
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <build_depend>ament_cmake</build_depend>
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>geometry_msgs</depend>
+  <exec_depend>RPi.GPIO</exec_depend>
+
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
